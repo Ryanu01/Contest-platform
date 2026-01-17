@@ -9,7 +9,7 @@ dist
 # code coverage
 coverage
 *.lcov
-
+config.ts
 # logs
 logs
 _.log
