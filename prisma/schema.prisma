@@ -1,0 +1,113 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model User {
+  id              Int       @id @default(autoincrement())
+  name            String
+  email           String    @unique
+  password        String
+  role            Role
+  created_at      DateTime  
+  Contests        Contest[]
+  mcqSubmissions  McqSubmission[]
+  dsaSubmissions  DsaSubmission[]
+}
+
+
+model Contest {
+  id            Int      @id  @default(autoincrement())
+  title         String
+  description   String
+  creator_id    Int
+  user          User     @relation(references: [id], fields: [creator_id])
+  start_time    DateTime
+  end_time      DateTime
+  created_at    DateTime
+  mcqQuestions  McqQuestion[]
+  dsaProblems   DsaProblem[]
+}
+
+model McqQuestion {
+  id                    Int     @id  @default(autoincrement())
+  contest_id            Int
+  contest               Contest @relation(references: [id], fields: [contest_id])
+  question_text         String
+  options               String[]
+  correct_option_index  Int
+  points                Int     @default(1)
+  created_at            Int
+  submission            McqSubmission[]
+}
+
+model DsaProblem {
+  id            Int       @id @default(autoincrement())
+  contest_id    Int
+  contest       Contest   @relation(references: [id], fields: [contest_id])
+  title         String
+  description   String
+  tags          String[]
+  points        Int       @default(100)
+  time_limit    Int       @default(2000)
+  memory_limit  Int       @default(256)
+  created_at    DateTime
+  testCases     TestCase[]
+  submission    DsaSubmission[]
+}
+
+model TestCase {
+  id                Int       @id  @default(autoincrement())
+  problem_id        Int
+  problem           DsaProblem    @relation(references: [id], fields: [problem_id])
+  input             String
+  expected_output   String
+  is_hidden         Boolean   @default(false)
+  created_at        DateTime
+}
+
+model McqSubmission {
+  id            Int         @id @default(autoincrement())
+  user_id       Int
+  user          User        @relation(references: [id], fields: [user_id])
+  question_id   Int
+  question      McqQuestion @relation(references: [id], fields: [question_id])
+  selected_option_index   Int
+  is_correct    Boolean     @default(false)
+  points_earned Int     @default(0)
+  submitted_at    DateTime
+  @@unique([user_id, question_id])
+}
+
+model DsaSubmission {
+  id                  Int         @id @default(autoincrement())
+  user_id             Int 
+  user                User        @relation(references: [id], fields: [user_id])
+  problem_id          Int
+  problem             DsaProblem  @relation(references: [id], fields: [problem_id])
+  code                String      
+  language            String      @db.VarChar(50)
+  status              String      @db.VarChar(50)
+  points_earned       Int         @default(0)
+  test_cases_passed   Int         @default(0)
+  total_test_cases    Int         @default(0)
+  execution_time      Int
+  submitted_at        DateTime
+}
+
+enum Role {
+  creator
+  contestee
+}
+
