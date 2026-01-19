@@ -558,3 +558,112 @@ app.post("/api/contests/:contestId/dsa", authMiddleware, async (req, res) => {
     })
   }
 })
+
+app.get("/api/problems/:problemId", authMiddleware, async (req, res) => {
+  try {
+
+
+    const dsaProblem = await client.$transaction([
+      client.dsaProblem.findFirst({
+        where: {
+          id: Number(req.params.problemId)
+        }
+      }),
+
+      client.testCase.findMany({
+        where: {
+          problem_id: Number(req.params.problemId),
+          is_hidden: false
+        }
+      })
+    ])
+
+    if (!dsaProblem[0]) {
+      return res.status(404).json({
+        success: false,
+        data: null,
+        error: "PROBLEM_NOT_FOUND"
+      })
+    }
+
+    const isUser = await client.user.findFirst({
+      where: {
+        id: req.userId
+      }
+    })
+
+    if (!isUser) {
+      return res.status(401).json({
+        success: false,
+        data: null,
+        error: "UNAUTHORIZED"
+      })
+    }
+
+    const isCreator = await client.contest.findFirst({
+      where: {
+        id: dsaProblem[0].contest_id,
+        creator_id: req.userId
+      }
+    })
+
+    if (isCreator) {
+      return res.status(403).json({
+        success: false,
+        data: null,
+        error: "FORBIDDEN"
+      })
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        id: dsaProblem[0].id,
+        contestId: dsaProblem[0].contest_id,
+        title: dsaProblem[0].title,
+        description: dsaProblem[0].description,
+        tags: dsaProblem[0].tags,
+        points: dsaProblem[0].points,
+        timeLimit: dsaProblem[0].time_limit,
+        memoryLimit: dsaProblem[0].memory_limit,
+        visibleTestCases: [{
+          input: dsaProblem[1].map(tst => tst.input,),
+          expectedOutput: dsaProblem[1].map(tst => tst.expected_output)
+        }]
+      },
+      error: null
+    })
+  } catch (error) {
+    return res.status(500).json({
+      error
+    })
+  }
+})
+
+app.post("/api/problems/:problemId/submit", authMiddleware, async (req, res) => {
+  try {
+    const isUser = await client.user.findFirst({
+      where: {
+        id: req.userId
+      }
+    })
+
+    if (!isUser) {
+      return res.status(401).json({
+        success: false,
+        data: null,
+        error: "UNAUTHORIZED"
+      })
+    }
+
+    const contest = client.user.findFirst({
+      where: {
+        id: Number(req.params.problemId)
+      }
+    })
+
+
+  } catch (error) {
+
+  }
+})
