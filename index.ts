@@ -656,14 +656,61 @@ app.post("/api/problems/:problemId/submit", authMiddleware, async (req, res) => 
       })
     }
 
-    const contest = client.user.findFirst({
+    const dsaProblem = await client.dsaProblem.findFirst({
       where: {
         id: Number(req.params.problemId)
       }
     })
 
+    if (!dsaProblem) {
+      return res.status(404).json({
+        success: false,
+        data: null,
+        error: "PROBLEM_NOT_FOUND"
+      })
+    }
 
+
+    const cotestDb = await client.contest.findFirst({
+      where: {
+        id: dsaProblem.contest_id
+      }
+    })
+
+    if (!cotestDb) {
+      return res.status(404).json({
+        success: false,
+        data: null,
+        error: "CONTEST_NOT_FOUND"
+      })
+    }
+
+    if (cotestDb.end_time < new Date() || cotestDb.start_time > new Date()) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        error: "CONTEST_NOT_ACTIVE"
+      })
+    }
+
+    const { success, data } = req.body
+
+    if (!success) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        error: "INVALID_REQUEST"
+      })
+    }
+
+    /* need to figure out how to exec code of the contestee
+     * method 1.) docker
+     * mehtod 2.) exec
+     * method 3.) judge0 (need to check how to set this up locallly)
+    */
   } catch (error) {
-
+    return res.status(500).json({
+      error
+    })
   }
 })

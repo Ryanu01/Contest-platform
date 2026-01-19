@@ -46,4 +46,11 @@ export const DsaSchma = z.object({
   testCases: testCasesSchema.array()
 })
 
+const languageSchema = z.object({
+  javascript: z.string()
+})
 
+export const DsaSubmissionSchema = z.object({
+  code: z.string(),
+  language: languageSchema
+})
