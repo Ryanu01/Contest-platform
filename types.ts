@@ -22,12 +22,12 @@ export const ContestSchema = z.object({
 export const McqSchema = z.object({
   questionText: z.string(),
   options: z.string().array(),
-  correctOptionIndex: z.number(),
-  points: z.number()
+  correctOptionIndex: z.string(),
+  points: z.string()
 })
 
 export const McqSubmissionSchema = z.object({
-  selectedOptionIndex: z.number()
+  selectedOptionIndex: z.string()
 })
 
 const testCasesSchema = z.object({
@@ -40,9 +40,9 @@ export const DsaSchma = z.object({
   title: z.string(),
   description: z.string(),
   tags: z.string().array(),
-  points: z.number(),
-  timeLimit: z.number(),
-  memoryLimit: z.number(),
+  points: z.string(),
+  timeLimit: z.string(),
+  memoryLimit: z.string(),
   testCases: testCasesSchema.array()
 })
 
