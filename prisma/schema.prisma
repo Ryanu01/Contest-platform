@@ -31,22 +31,22 @@ model Contest {
   id            Int      @id  @default(autoincrement())
   title         String
   description   String
-  creator_id    Int
-  user          User     @relation(references: [id], fields: [creator_id])
-  start_time    DateTime
-  end_time      DateTime
-  created_at    DateTime  @default(now())
+  creatorId    Int
+  user          User     @relation(references: [id], fields: [creatorId])
+  startTime    DateTime
+  endTime      DateTime
+  createdAt    DateTime  @default(now())
   mcqQuestions  McqQuestion[]
   dsaProblems   DsaProblem[]
 }
 
 model McqQuestion {
   id                    Int       @id  @default(autoincrement())
-  contest_id            Int
-  contest               Contest   @relation(references: [id], fields: [contest_id])
-  question_text         String
+  contestId            Int
+  contest               Contest   @relation(references: [id], fields: [contestId])
+  questionText         String
   options               String[]
-  correct_option_index  Int
+  correctOptionIndex  Int
   points                Int       @default(1)
   created_at            DateTime  @default(now())
   submission            McqSubmission[]
@@ -54,56 +54,56 @@ model McqQuestion {
 
 model DsaProblem {
   id            Int       @id @default(autoincrement())
-  contest_id    Int
-  contest       Contest   @relation(references: [id], fields: [contest_id])
+  contestId    Int
+  contest       Contest   @relation(references: [id], fields: [contestId])
   title         String
   description   String
   tags          String[]
   points        Int       @default(100)
-  time_limit    Int       @default(2000)
-  memory_limit  Int       @default(256)
-  created_at    DateTime  @default(now())
+  timeLimit    Int       @default(2000)
+  memoryLimit  Int       @default(256)
+  createdAt    DateTime  @default(now())
   testCases     TestCase[]
   submission    DsaSubmission[]
 }
 
 model TestCase {
   id                Int       @id  @default(autoincrement())
-  problem_id        Int
-  problem           DsaProblem    @relation(references: [id], fields: [problem_id])
+  problemId        Int
+  problem           DsaProblem    @relation(references: [id], fields: [problemId])
   input             String
-  expected_output   String
-  is_hidden         Boolean   @default(false)
-  created_at        DateTime  @default(now())
+  expectedOutput   String
+  isHidden         Boolean   @default(false)
+  createdAt        DateTime  @default(now())
 }
 
 model McqSubmission {
   id            Int         @id @default(autoincrement())
-  user_id       Int
-  user          User        @relation(references: [id], fields: [user_id])
-  question_id   Int
-  question      McqQuestion @relation(references: [id], fields: [question_id])
-  selected_option_index     Int
-  is_correct    Boolean     @default(false)
-  points_earned Int         @default(0)
-  submitted_at    DateTime  @default(now())
-  @@unique([user_id, question_id])
+  userId       Int
+  user          User        @relation(references: [id], fields: [userId])
+  questionId   Int
+  question      McqQuestion @relation(references: [id], fields: [questionId])
+  selectedOptionIndex     Int
+  isCorrect    Boolean     @default(false)
+  pointsEarned Int         @default(0)
+  submittedAt    DateTime  @default(now())
+  @@unique([userId, questionId])
 }
 
 model DsaSubmission {
   id                  Int         @id @default(autoincrement())
-  user_id             Int 
-  user                User        @relation(references: [id], fields: [user_id])
-  problem_id          Int
-  problem             DsaProblem  @relation(references: [id], fields: [problem_id])
+  userId             Int 
+  user                User        @relation(references: [id], fields: [userId])
+  problemId          Int
+  problem             DsaProblem  @relation(references: [id], fields: [problemId])
   code                String      
   language            String      @db.VarChar(50)
   status              String      @db.VarChar(50)
-  points_earned       Int         @default(0)
-  test_cases_passed   Int         @default(0)
-  total_test_cases    Int         @default(0)
-  execution_time      Int
-  submitted_at        DateTime    @default(now())
+  pointsEarned       Int         @default(0)
+  testCasesPassed   Int         @default(0)
+  totalTestCases    Int         @default(0)
+  executionTime      Int
+  submittedAt        DateTime    @default(now())
 }
 
 enum Role {

@@ -2,19 +2,21 @@ import express from "express"
 import { ContestSchema, DsaSchma, LoginSchema, McqSchema, McqSubmissionSchema, SignInSchema } from "./types"
 import bcrypt from "bcrypt"
 import { PrismaClient } from "@prisma/client"
-import jwt, { type JwtPayload } from "jsonwebtoken"
+import jwt from "jsonwebtoken"
 import JWT_SECRET from "./config"
 import { authMiddleware } from "./middleware"
-import { date, json } from "zod"
-import { tr } from "zod/locales"
 const client = new PrismaClient()
 const app = express()
-
+app.use(express.json())
 app.post("/api/auth/signup", async (req, res) => {
   try {
     const body = req.body
+    console.log(req.body);
+
     const { success, data } = SignInSchema.safeParse(body)
     if (!success) {
+      console.log(success.valueOf());
+
       return res.status(400).json({
         success: false,
         data: null,
@@ -43,7 +45,7 @@ app.post("/api/auth/signup", async (req, res) => {
         password: hashedPassword,
         name: data.name,
         role: data.role ?? "contestee",
-        created_at: new Date().getTime().toString()
+        created_at: new Date()
       }
     })
 
@@ -130,7 +132,7 @@ app.post("/api/contests", authMiddleware, async (req, res) => {
 
     const creatorExist = await client.user.findFirst({
       where: {
-        id: userId,
+        id: Number(userId),
       }
     })
 
@@ -142,7 +144,7 @@ app.post("/api/contests", authMiddleware, async (req, res) => {
       })
     }
 
-    if (creatorExist.role !== "creator") {
+    if (role !== "creator") {
       return res.status(403).json({
         success: false,
         data: null,
@@ -166,9 +168,9 @@ app.post("/api/contests", authMiddleware, async (req, res) => {
       data: {
         title: data.title,
         description: data.description,
-        start_time: new Date(data.startTime),
-        end_time: new Date(data.endTime),
-        creator_id: creatorExist.id
+        startTime: data.startTime,
+        endTime: data.endTime,
+        creatorId: creatorExist.id
       }
     })
 
@@ -178,13 +180,15 @@ app.post("/api/contests", authMiddleware, async (req, res) => {
         id: contestDb.id,
         title: contestDb.title,
         description: contestDb.description,
-        creatorId: contestDb.creator_id,
-        startTime: contestDb.start_time,
-        endTime: contestDb.end_time
+        creatorId: contestDb.creatorId,
+        startTime: contestDb.startTime,
+        endTime: contestDb.endTime
       },
       error: null
     })
   } catch (error) {
+     console.error("FULL ERROR ↓↓↓");
+  console.error(error);
     return res.status(500).json({
       error
     })
@@ -216,7 +220,7 @@ app.get("/api/contests/:contestId", authMiddleware, async (req, res) => {
         dsaProblems: true,
         mcqQuestions: {
           omit: {
-            correct_option_index: true
+            correctOptionIndex: true
           }
         }
       }
@@ -236,12 +240,12 @@ app.get("/api/contests/:contestId", authMiddleware, async (req, res) => {
         id: contestExist.id,
         title: contestExist.title,
         description: contestExist.description,
-        startTime: contestExist.start_time,
-        endTime: contestExist.end_time,
-        creatorId: contestExist.creator_id,
+        startTime: contestExist.startTime,
+        endTime: contestExist.endTime,
+        creatorId: contestExist.creatorId,
         mcqs: contestExist.mcqQuestions.map((mcq) => ({
           id: mcq.id,
-          questionText: mcq.question_text,
+          questionText: mcq.questionText,
           options: mcq.options,
           points: mcq.points
         })),
@@ -251,8 +255,8 @@ app.get("/api/contests/:contestId", authMiddleware, async (req, res) => {
           description: dsa.description,
           tage: dsa.tags,
           points: dsa.points,
-          timeLimit: dsa.time_limit,
-          memoryLimit: dsa.memory_limit
+          timeLimit: dsa.timeLimit,
+          memoryLimit: dsa.memoryLimit
         }))
       },
       error: null
@@ -318,10 +322,10 @@ app.post("/api/contests/:contestId/mcq", authMiddleware, async (req, res) => {
 
     const mcqDb = await client.mcqQuestion.create({
       data: {
-        contest_id: contestDb.id,
-        question_text: data.questionText,
+        contestId: contestDb.id,
+        questionText: data.questionText,
         options: data.options,
-        correct_option_index: data.correctOptionIndex,
+        correctOptionIndex: data.correctOptionIndex,
         points: data.points,
       }
     })
@@ -330,7 +334,7 @@ app.post("/api/contests/:contestId/mcq", authMiddleware, async (req, res) => {
       success: true,
       data: {
         id: mcqDb.id,
-        contestId: mcqDb.contest_id
+        contestId: mcqDb.contestId
       },
       error: null
     })
@@ -371,7 +375,7 @@ app.post("/api/contests/:contestId/mcq/:questionId/submit", authMiddleware, asyn
       client.mcqQuestion.findFirst({
         where: {
           id: Number(questionId),
-          contest_id: Number(contestId)
+          contestId: Number(contestId)
         }
       })
     ])
@@ -384,7 +388,7 @@ app.post("/api/contests/:contestId/mcq/:questionId/submit", authMiddleware, asyn
       })
     }
 
-    if (userExist.id === ifContestAndQuestionExist[0].creator_id) {
+    if (userExist.id === ifContestAndQuestionExist[0].creatorId) {
       return res.status(403).json({
         success: false,
         data: null,
@@ -392,7 +396,7 @@ app.post("/api/contests/:contestId/mcq/:questionId/submit", authMiddleware, asyn
       })
     }
 
-    if (ifContestAndQuestionExist[0].start_time > new Date() || ifContestAndQuestionExist[0].end_time < new Date()) {
+    if (ifContestAndQuestionExist[0].startTime > new Date() || ifContestAndQuestionExist[0].endTime < new Date()) {
       return res.status(400).json({
         success: false,
         data: null,
@@ -403,9 +407,9 @@ app.post("/api/contests/:contestId/mcq/:questionId/submit", authMiddleware, asyn
 
     const existingSubmission = await client.mcqSubmission.findUnique({
       where: {
-        user_id_question_id: {
-          user_id: userExist.id,
-          question_id: Number(questionId)
+        userId_questionId: {
+          userId: userExist.id,
+          questionId: Number(questionId)
         }
       }
     })
@@ -429,19 +433,19 @@ app.post("/api/contests/:contestId/mcq/:questionId/submit", authMiddleware, asyn
       })
     }
 
-    const isCorrect = ifContestAndQuestionExist[1].correct_option_index === data.selectedOptionIndex
+    const isCorrect = ifContestAndQuestionExist[1].correctOptionIndex === data.selectedOptionIndex
 
     const pointsEarned = isCorrect ? ifContestAndQuestionExist[1].points : 0
 
 
     const mcqSubmissionDb = await client.mcqSubmission.create({
       data: {
-        user_id: userExist.id,
-        question_id: Number(questionId),
-        selected_option_index: data.selectedOptionIndex,
-        submitted_at: new Date(),
-        is_correct: true,
-        points_earned: pointsEarned
+        userId: userExist.id,
+        questionId: Number(questionId),
+        selectedOptionIndex: data.selectedOptionIndex,
+        submittedAt: new Date(),
+        isCorrect: true,
+        pointsEarned: pointsEarned
       }
     })
 
@@ -449,7 +453,7 @@ app.post("/api/contests/:contestId/mcq/:questionId/submit", authMiddleware, asyn
       success: true,
       data: {
         isCorrect: true,
-        pointsEarned: mcqSubmissionDb.points_earned
+        pointsEarned: mcqSubmissionDb.pointsEarned
       },
       error: null
     })
@@ -469,7 +473,7 @@ app.post("/api/contests/:contestId/dsa", authMiddleware, async (req, res) => {
     const contestExist = await client.contest.findFirst({
       where: {
         id: contestId,
-        creator_id: req.userId
+        creatorId: req.userId
       }
     })
 
@@ -498,7 +502,7 @@ app.post("/api/contests/:contestId/dsa", authMiddleware, async (req, res) => {
 
     const isCreator = await client.contest.findFirst({
       where: {
-        creator_id: req.userId,
+        creatorId: req.userId,
         id: contestExist.id
       }
     })
@@ -523,19 +527,19 @@ app.post("/api/contests/:contestId/dsa", authMiddleware, async (req, res) => {
 
     const dsaDb = await client.dsaProblem.create({
       data: {
-        contest_id: contestExist.id,
+        contestId: contestExist.id,
         title: data.title,
         description: data.description,
         tags: data.tags,
         points: data.points,
-        time_limit: data.timeLimit,
-        memory_limit: data.memoryLimit,
+        timeLimit: data.timeLimit,
+        memoryLimit: data.memoryLimit,
 
         testCases: {
           create: data.testCases.map((tc) => ({
             input: tc.input,
-            is_hidden: tc.isHeaden,
-            expected_output: tc.expectedOutPut
+            isHidden: tc.isHeaden,
+            expectedOutput: tc.expectedOutPut
           }))
         }
       },
@@ -548,7 +552,7 @@ app.post("/api/contests/:contestId/dsa", authMiddleware, async (req, res) => {
       success: true,
       data: {
         id: dsaDb.id,
-        contestId: dsaDb.contest_id
+        contestId: dsaDb.contestId
       },
       error: null
     })
@@ -572,8 +576,8 @@ app.get("/api/problems/:problemId", authMiddleware, async (req, res) => {
 
       client.testCase.findMany({
         where: {
-          problem_id: Number(req.params.problemId),
-          is_hidden: false
+          problemId: Number(req.params.problemId),
+          isHidden: false
         }
       })
     ])
@@ -602,8 +606,8 @@ app.get("/api/problems/:problemId", authMiddleware, async (req, res) => {
 
     const isCreator = await client.contest.findFirst({
       where: {
-        id: dsaProblem[0].contest_id,
-        creator_id: req.userId
+        id: dsaProblem[0].contestId,
+        creatorId: req.userId
       }
     })
 
@@ -619,16 +623,16 @@ app.get("/api/problems/:problemId", authMiddleware, async (req, res) => {
       success: true,
       data: {
         id: dsaProblem[0].id,
-        contestId: dsaProblem[0].contest_id,
+        contestId: dsaProblem[0].contestId,
         title: dsaProblem[0].title,
         description: dsaProblem[0].description,
         tags: dsaProblem[0].tags,
         points: dsaProblem[0].points,
-        timeLimit: dsaProblem[0].time_limit,
-        memoryLimit: dsaProblem[0].memory_limit,
+        timeLimit: dsaProblem[0].timeLimit,
+        memoryLimit: dsaProblem[0].memoryLimit,
         visibleTestCases: [{
           input: dsaProblem[1].map(tst => tst.input,),
-          expectedOutput: dsaProblem[1].map(tst => tst.expected_output)
+          expectedOutput: dsaProblem[1].map(tst => tst.expectedOutput)
         }]
       },
       error: null
@@ -673,7 +677,7 @@ app.post("/api/problems/:problemId/submit", authMiddleware, async (req, res) => 
 
     const cotestDb = await client.contest.findFirst({
       where: {
-        id: dsaProblem.contest_id
+        id: dsaProblem.contestId
       }
     })
 
@@ -685,7 +689,7 @@ app.post("/api/problems/:problemId/submit", authMiddleware, async (req, res) => 
       })
     }
 
-    if (cotestDb.end_time < new Date() || cotestDb.start_time > new Date()) {
+    if (cotestDb.endTime < new Date() || cotestDb.startTime > new Date()) {
       return res.status(400).json({
         success: false,
         data: null,
@@ -713,4 +717,10 @@ app.post("/api/problems/:problemId/submit", authMiddleware, async (req, res) => 
       error
     })
   }
+})
+
+
+app.listen(3000, () => {
+  console.log("Server running on port 3000");
+
 })
