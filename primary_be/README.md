@@ -29,7 +29,7 @@ cp .env.example .env
 
 ## Get judge0 running locally 
 
- For reference follow this link [ref]([https://devsujal.hashnode.dev/create-your-own-leetcode-with-judge](https://devsujal.hashnode.dev/create-your-own-leetcode-with-judge))
+ For reference follow this link [ref](https://devsujal.hashnode.dev/create-your-own-leetcode-with-judge)
  
 To install dependencies:
 ```bash
