@@ -1,10 +1,13 @@
 import express from "express"
-import { ContestSchema, DsaSchma, LoginSchema, McqSchema, McqSubmissionSchema, SignInSchema } from "./types"
+import { ContestSchema, DsaSchma, DsaSubmissionSchema, LoginSchema, McqSchema, McqSubmissionSchema, SignInSchema } from "./types"
 import bcrypt from "bcrypt"
 import { PrismaClient } from "@prisma/client"
 import jwt from "jsonwebtoken"
 import JWT_SECRET from "./config"
 import { authMiddleware } from "./middleware"
+import { da } from "zod/locales"
+import axios from "axios"
+import { runCode } from "./utils/judge0"
 const client = new PrismaClient()
 const app = express()
 app.use(express.json())
@@ -504,7 +507,7 @@ app.post("/api/contests/:contestId/dsa", authMiddleware, async (req, res) => {
     const contestExist = await client.contest.findFirst({
       where: {
         id: contestId,
-        creatorId: req.userId
+        creatorId: Number(req.userId)
       }
     })
 
@@ -556,6 +559,14 @@ app.post("/api/contests/:contestId/dsa", authMiddleware, async (req, res) => {
       })
     }
 
+    if (contestExist.endTime < new Date()) {
+      return res.status(400).json({
+        success: "False",
+        error: "CONTEST_NOT_ACTIVE",
+        data: null
+      })
+    }
+
     const dsaDb = await client.dsaProblem.create({
       data: {
         contestId: contestExist.id,
@@ -588,6 +599,8 @@ app.post("/api/contests/:contestId/dsa", authMiddleware, async (req, res) => {
       error: null
     })
   } catch (error) {
+    console.log(error);
+
     return res.status(500).json({
       error
     })
@@ -728,7 +741,8 @@ app.post("/api/problems/:problemId/submit", authMiddleware, async (req, res) => 
       })
     }
 
-    const { success, data } = req.body
+    const body = req.body
+    const { success, data } = DsaSubmissionSchema.safeParse(body)
 
     if (!success) {
       return res.status(400).json({
@@ -737,6 +751,18 @@ app.post("/api/problems/:problemId/submit", authMiddleware, async (req, res) => 
         error: "INVALID_REQUEST"
       })
     }
+
+
+    console.log(data.code);
+
+    const ans = await runCode({ sourceCode: data.code, languageId: 54, stdin: "" })
+
+
+
+    return res.status(200).json({
+      data
+    })
+
 
     /* need to figure out how to exec code of the contestee
      * method 1.) docker
